@@ -8,7 +8,7 @@ const generatedVideoSchema = z.object({
   width: z.number().int().min(320).max(3840).default(1280),
   height: z.number().int().min(240).max(2160).default(720),
   fps: z.number().int().min(12).max(60).default(30),
-  durationInFrames: z.number().int().min(45).max(1800).default(300),
+  durationInFrames: z.number().int().min(45).max(3600).default(300),
   inputProps: z.record(z.unknown()).default({}),
   componentCode: z.string().min(40)
 });
@@ -27,11 +27,24 @@ const fallbackSpec: GeneratedVideoSpec = {
 
 function buildGenerationPrompt({
   userPrompt,
-  hasUploadedImage
+  hasUploadedImage,
+  durationSeconds,
+  width,
+  height,
+  fps
 }: {
   userPrompt: string;
   hasUploadedImage: boolean;
+  durationSeconds?: number;
+  width?: number;
+  height?: number;
+  fps?: number;
 }): string {
+  const targetFps = fps ?? 30;
+  const targetDuration = durationSeconds ?? 10;
+  const targetWidth = width ?? 1280;
+  const targetHeight = height ?? 720;
+
   const promptLines = [
     "You are a Remotion video generator.",
     "Return ONLY one JSON object with exactly these keys:",
@@ -44,7 +57,10 @@ function buildGenerationPrompt({
     "- Do not use external URLs, file system APIs, or third-party packages.",
     "- Keep it visual, animated, and aligned to the user prompt.",
     "- Ensure syntax is valid and ready to compile.",
-    "- durationInFrames should match the content timing and be between 6 and 12 seconds.",
+    `- The video MUST be exactly ${targetDuration} seconds long (${targetFps * targetDuration} frames at ${targetFps} fps).`,
+    `- Set fps to ${targetFps}.`,
+    `- Set durationInFrames to ${targetFps * targetDuration}.`,
+    `- Set width to ${targetWidth} and height to ${targetHeight}.`,
     "- Keep visible motion throughout the full clip (no long static freeze).",
     "- Use inline styles only.",
     "- Do not wrap in markdown code fences.",
@@ -104,7 +120,7 @@ function normalizeSpec(spec: GeneratedVideoSpec): GeneratedVideoSpec {
   const minSeconds = 6;
   const normalizedDuration = Math.max(
     45,
-    Math.min(1800, spec.durationInFrames || fallbackSpec.durationInFrames),
+    Math.min(3600, spec.durationInFrames || fallbackSpec.durationInFrames),
     Math.ceil(normalizedFps * minSeconds)
   );
 
@@ -137,11 +153,19 @@ function extractAssistantContent(rawResponse: unknown): string {
 export async function generateVideoSpecWithCopilot({
   prompt,
   model,
-  imageDataUrl
+  imageDataUrl,
+  durationSeconds,
+  width,
+  height,
+  fps
 }: {
   prompt: string;
   model?: string;
   imageDataUrl?: string;
+  durationSeconds?: number;
+  width?: number;
+  height?: number;
+  fps?: number;
 }): Promise<{ spec: GeneratedVideoSpec; rawContent: string }> {
   const client = new CopilotClient({
     githubToken: process.env.GITHUB_TOKEN,
@@ -161,7 +185,11 @@ export async function generateVideoSpecWithCopilot({
       {
         prompt: buildGenerationPrompt({
           userPrompt: prompt,
-          hasUploadedImage: Boolean(imageDataUrl)
+          hasUploadedImage: Boolean(imageDataUrl),
+          durationSeconds,
+          width,
+          height,
+          fps
         })
       },
       4 * 60 * 1000
@@ -190,8 +218,21 @@ export async function generateVideoSpecWithCopilot({
 
     const parsed = parseJsonCandidate(content);
     const parsedSpec = normalizeSpec(generatedVideoSchema.parse(parsed));
+
+    // Override with user-specified video settings
+    const resolvedFps = fps ?? parsedSpec.fps;
+    const resolvedWidth = width ?? parsedSpec.width;
+    const resolvedHeight = height ?? parsedSpec.height;
+    const resolvedDuration = durationSeconds
+      ? Math.ceil(resolvedFps * durationSeconds)
+      : parsedSpec.durationInFrames;
+
     const spec: GeneratedVideoSpec = {
       ...parsedSpec,
+      fps: resolvedFps,
+      width: resolvedWidth,
+      height: resolvedHeight,
+      durationInFrames: resolvedDuration,
       inputProps: imageDataUrl ? { ...parsedSpec.inputProps, imageDataUrl } : parsedSpec.inputProps
     };
 

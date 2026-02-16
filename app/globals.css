@@ -168,6 +168,42 @@ body {
   gap: 0.4rem;
 }
 
+.video-settings-row {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: 1fr;
+  margin-top: 0.2rem;
+}
+
+@media (min-width: 640px) {
+  .video-settings-row {
+    grid-template-columns: 1fr 1fr 1fr;
+    align-items: end;
+  }
+}
+
+.setting-group {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.setting-input {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(4, 8, 17, 0.65);
+  color: var(--text);
+  border-radius: 0;
+  min-height: 42px;
+  padding: 0.45rem 0.6rem;
+  font-family: "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+  font-size: 0.95rem;
+}
+
+.setting-input:focus {
+  outline: none;
+  border-color: rgba(0, 213, 255, 0.85);
+}
+
 .upload-group {
   display: grid;
   gap: 0.5rem;

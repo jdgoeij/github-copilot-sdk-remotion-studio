@@ -95,6 +95,10 @@ export default function HomePage() {
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
   const [imageFileName, setImageFileName] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
+  const [durationSeconds, setDurationSeconds] = useState(10);
+  const [videoWidth, setVideoWidth] = useState(1280);
+  const [videoHeight, setVideoHeight] = useState(720);
+  const [videoFps, setVideoFps] = useState(30);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
 
   const addClientLog = (message: string) => {
@@ -273,9 +277,21 @@ export default function HomePage() {
     }
 
     try {
-      const payload: { prompt: string; model: string; imageDataUrl?: string } = {
+      const payload: {
+        prompt: string;
+        model: string;
+        imageDataUrl?: string;
+        durationSeconds: number;
+        width: number;
+        height: number;
+        fps: number;
+      } = {
         prompt,
-        model
+        model,
+        durationSeconds,
+        width: videoWidth,
+        height: videoHeight,
+        fps: videoFps
       };
 
       if (imageDataUrl) {
@@ -395,6 +411,64 @@ export default function HomePage() {
                     {modelOption}
                   </option>
                 ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="form-row video-settings-row">
+            <div className="setting-group">
+              <label className="field-label" htmlFor="duration">
+                Duration (seconds)
+              </label>
+              <input
+                id="duration"
+                className="setting-input"
+                type="number"
+                min={1}
+                max={60}
+                step={1}
+                value={durationSeconds}
+                onChange={(event) => setDurationSeconds(Math.max(1, Math.min(60, Number(event.target.value))))}
+              />
+            </div>
+
+            <div className="setting-group">
+              <label className="field-label" htmlFor="resolution">
+                Resolution
+              </label>
+              <select
+                id="resolution"
+                className="setting-input"
+                value={`${videoWidth}x${videoHeight}`}
+                onChange={(event) => {
+                  const [w, h] = event.target.value.split("x").map(Number);
+                  setVideoWidth(w);
+                  setVideoHeight(h);
+                }}
+              >
+                <option value="640x360">640x360 (360p)</option>
+                <option value="854x480">854x480 (480p)</option>
+                <option value="1280x720">1280x720 (720p)</option>
+                <option value="1920x1080">1920x1080 (1080p)</option>
+                <option value="2560x1440">2560x1440 (1440p)</option>
+                <option value="3840x2160">3840x2160 (4K)</option>
+              </select>
+            </div>
+
+            <div className="setting-group">
+              <label className="field-label" htmlFor="fps">
+                Frame Rate
+              </label>
+              <select
+                id="fps"
+                className="setting-input"
+                value={videoFps}
+                onChange={(event) => setVideoFps(Number(event.target.value))}
+              >
+                <option value={12}>12 fps</option>
+                <option value={24}>24 fps</option>
+                <option value={30}>30 fps</option>
+                <option value={60}>60 fps</option>
               </select>
             </div>
 
