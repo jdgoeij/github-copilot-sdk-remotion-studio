@@ -174,7 +174,7 @@ export async function generateVideoSpecWithCopilot({
   width?: number;
   height?: number;
   fps?: number;
-}): Promise<{ spec: GeneratedVideoSpec; rawContent: string }> {
+}): Promise<{ spec: GeneratedVideoSpec; rawContent: string; tokenUsage: { inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens: number } }> {
   const client = new CopilotClient({
     githubToken: process.env.GITHUB_TOKEN,
     useLoggedInUser: process.env.GITHUB_TOKEN ? false : true
@@ -187,6 +187,21 @@ export async function generateVideoSpecWithCopilot({
 
     session = await client.createSession({
       model: model || process.env.COPILOT_MODEL || "gpt-5"
+    });
+
+    // Collect token usage from assistant.usage events
+    let tokenUsage: { inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens: number } = {
+      inputTokens: 0,
+      outputTokens: 0,
+      cacheReadTokens: 0,
+      cacheWriteTokens: 0
+    };
+
+    session.on("assistant.usage", (event) => {
+      tokenUsage.inputTokens += event.data.inputTokens ?? 0;
+      tokenUsage.outputTokens += event.data.outputTokens ?? 0;
+      tokenUsage.cacheReadTokens += event.data.cacheReadTokens ?? 0;
+      tokenUsage.cacheWriteTokens += event.data.cacheWriteTokens ?? 0;
     });
 
     const response = await session.sendAndWait(
@@ -248,7 +263,7 @@ export async function generateVideoSpecWithCopilot({
       throw new Error("Generated component code is missing a default export.");
     }
 
-    return { spec, rawContent: content };
+    return { spec, rawContent: content, tokenUsage };
   } finally {
     if (session) {
       await session.destroy().catch(() => undefined);

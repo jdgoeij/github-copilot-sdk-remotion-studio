@@ -59,7 +59,7 @@ export async function POST(request: Request) {
     log("skills.selected", relevantSkills.map((s) => s.name).join(", ") || "none");
 
     log("copilot.generate.start", `Model: ${model || process.env.COPILOT_MODEL || "gpt-5"}`);
-    const { spec } = await generateVideoSpecWithCopilot({
+    const { spec, tokenUsage } = await generateVideoSpecWithCopilot({
       prompt,
       model,
       imageDataUrl: normalizedImageDataUrl,
@@ -68,6 +68,10 @@ export async function POST(request: Request) {
       height,
       fps
     });
+
+    const totalTokens = tokenUsage.inputTokens + tokenUsage.outputTokens;
+    log("copilot.tokens", `input: ${tokenUsage.inputTokens}, output: ${tokenUsage.outputTokens}, cache read: ${tokenUsage.cacheReadTokens}, cache write: ${tokenUsage.cacheWriteTokens}, total: ${totalTokens}`);
+
     log("copilot.generate.done", `${spec.width}x${spec.height} @ ${spec.fps}fps, ${spec.durationInFrames} frames`);
 
     log("remotion.render.start");
