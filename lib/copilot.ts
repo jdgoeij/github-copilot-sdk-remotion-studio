@@ -1,5 +1,6 @@
 import { CopilotClient } from "@github/copilot-sdk";
 import { z } from "zod";
+import { selectRelevantSkills, buildSkillsPromptSection } from "@/lib/remotion-skills";
 
 export const fallbackModelOptions = ["gpt-5", "claude-sonnet-4.5"] as const;
 
@@ -77,6 +78,13 @@ function buildGenerationPrompt({
       "- Do not add extra thumbnail/watermark-style overlays unless explicitly requested.",
       ""
     );
+  }
+
+  // Inject relevant Remotion Agent Skills
+  const relevantSkills = selectRelevantSkills(userPrompt);
+  const skillsSection = buildSkillsPromptSection(relevantSkills);
+  if (skillsSection) {
+    promptLines.push(skillsSection);
   }
 
   promptLines.push("User prompt:", userPrompt);

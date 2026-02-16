@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { selectRelevantSkills } from "@/lib/remotion-skills";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -53,6 +54,9 @@ export async function POST(request: Request) {
     const { prompt, model, imageDataUrl, durationSeconds, width, height, fps } = requestSchema.parse(body);
     const normalizedImageDataUrl = imageDataUrl ?? undefined;
     log("request.parse.done", `Prompt length: ${prompt.length}. Image attached: ${normalizedImageDataUrl ? "yes" : "no"}`);
+
+    const relevantSkills = selectRelevantSkills(prompt);
+    log("skills.selected", relevantSkills.map((s) => s.name).join(", ") || "none");
 
     log("copilot.generate.start", `Model: ${model || process.env.COPILOT_MODEL || "gpt-5"}`);
     const { spec } = await generateVideoSpecWithCopilot({
